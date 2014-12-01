@@ -42,20 +42,22 @@ class Task(object):
         self._dry_run = dry_run
 
     def __call__(self, bundle):
-        git_command, action = self.make_git_command(bundle.uri, bundle.name)
-        if self._dry_run:
-            print " ".join([str(os.getpid())] + git_command)
-            return
-        print "Processing ({}) {}".format(action, bundle)
         try:
+            git_command, action = self.make_git_command(bundle.uri, bundle.name)
+            if self._dry_run:
+                print " ".join([str(os.getpid())] + git_command)
+                return
+            print "Processing ({}) {}".format(action, bundle)
             output = subprocess.check_output(git_command, stderr=subprocess.STDOUT)
+            out = "COMMAND: {}\nOUTPUT:\n{}".format(" ".join(git_command), output)
+            print out
+            return out
         except subprocess.CalledProcessError as cpe:
             error = "Error code {}. Output: {}".format(cpe.returncode, cpe.output)
             print error
             return error
-        out = "COMMAND: {}\nOUTPUT:\n{}".format(" ".join(git_command), output)
-        print out
-        return out
+        except KeyboardInterrupt:
+            pass
 
     def make_git_command(self, uri, name):
         bundle_dir = os.path.join(os.path.expanduser(self._bundles_dir), name)
@@ -76,7 +78,8 @@ def process_queue(queue, args):
     action = Task(args.bundles_dir, args.dry_run)
 
     # action = clone_dry_run if dry_run else clone
-    result = pool.map(action, queue, 1)
+    p = pool.map_async(action, queue, 1)
+    results = p.get(0xFFFF) # Give C-C a chance
     if not args.dry_run:
         print list(result)
 
