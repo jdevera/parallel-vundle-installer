@@ -62,6 +62,9 @@ class Task(object):
 
     def __call__(self, bundle):
         try:
+            if bundle.pinned:
+                logger.info("Not doing anything for %s. Pinned", bundle)
+                return Result(bundle, 'noop', 'pinned')
             git_command, action = self.make_git_command(bundle.uri, bundle.name)
             res = Result(bundle, git_command, action)
             if self._dry_run:
