@@ -21,6 +21,8 @@ import yaml
 # ---------------------------------------------------------------------------
 
 BUNDLES_DIR = '/tmp/bundlesdir'
+logger = multiprocessing.log_to_stderr()
+logger.setLevel(logging.INFO)
 
 class Bundle(object):
 
@@ -81,7 +83,8 @@ def process_queue(queue, args):
     p = pool.map_async(action, queue, 1)
     results = p.get(0xFFFF) # Give C-C a chance
     if not args.dry_run:
-        print list(result)
+        for res in results:
+            logger.info(res)
 
 
 def parse_args(argv):
@@ -97,6 +100,7 @@ def parse_args(argv):
 
 
 def get_bundles():
+    logger.info('Getting list of plugins from Vim (assumes Vundle use)')
     subprocess.check_call(['vim', '-X', '+put! =g:bundles', '+w! /tmp/bundles', '+qa'])
     jsondata = None
     with open("/tmp/bundles", "r") as fin:
@@ -115,12 +119,12 @@ def main(argv=[__name__]):
     try:
 
         if args.debug:
-            logger = multiprocessing.log_to_stderr()
             logger.setLevel(logging.DEBUG)
 
         bundles = get_bundles()
-        if bundles:
-            process_queue(bundles, args)
+        if not bundles:
+            logger.error("No plugins found from Vim. Do you use Vundle?")
+        process_queue(bundles, args)
 
     except KeyboardInterrupt:
         sys.exit(-1)
