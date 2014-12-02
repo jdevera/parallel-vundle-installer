@@ -1,0 +1,23 @@
+# Parallel Vundle Installer
+
+A Python script to install Vim plugins managed with Vundle.
+
+## Why not just Vundle
+
+I love Vundle, the declarative approach to plugin handling that it provides, that I can update, install, and activate immediately from Vim. It's awesome. I've been a Vundle contributor for a while now. Vundle, all written in vimscript, works everywhere with no other dependencies than git.
+
+But the installer drives me crazy, it's too slow.
+
+I only work with Linux boxes, and the most popular scripting languages are always installed. So I could use some other alternatives, like junegunn/vim-plug, which relies on Ruby. But I really like Vundle, and I want to keep using it.
+
+## What this script does
+
+I wrote this python script that runs Vim briefly to fetch the list of plugins you are managing with Vundle, and then spawns a number of concurrent install/update operations.
+
+It's fast. A run with no updates took 52 seconds with Vundle and only 6 seconds with this installer.
+
+I figured I'd share it.
+
+## License
+
+MIT
