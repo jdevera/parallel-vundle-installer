@@ -105,9 +105,9 @@ def process_queue(queue, args):
 def parse_args(argv):
     """ Parse and validate command line arguments """
     parser = argparse.ArgumentParser(description=__description__)
-    parser.add_argument('--jobs', '-j', default=None, type=int)
-    parser.add_argument('--bundles-dir', '-b', default=BUNDLES_DIR)
-    parser.add_argument('--debug', '-d', default=False, action='store_true')
+    parser.add_argument('--jobs', '-j', default=None, type=int, help='Number of simultaneous operations')
+    parser.add_argument('--bundles-dir', '-b', default=BUNDLES_DIR, help='Where the bundles are installed (Default: %s)' % BUNDLES_DIR)
+    parser.add_argument('--debug', '-d', default=False, action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args(argv[1:])
 
     return args
