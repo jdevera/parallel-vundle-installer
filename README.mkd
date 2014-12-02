@@ -18,6 +18,16 @@ It's fast. A run with no updates took 52 seconds with Vundle and only 6 seconds 
 
 I figured I'd share it.
 
+## Usage
+
+By default, the script runs as many concurrent jobs as CPUs your box has, which is okay, but not too fast.
+
+By default, plugins are installed in some directory under `/tmp`, for safety.
+
+So, try a proper run with:
+
+    ./pvi -j 32 -b "$HOME/.vim/bundles"
+
 ## License
 
 MIT
