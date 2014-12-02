@@ -38,6 +38,22 @@ class Bundle(object):
     def __str__(self):
         return unicode(self).encode('utf-8')
 
+class Result(object):
+    def __init__(self, bundle, command, action):
+        self.bundle = bundle
+        self.command = command
+        self.action = action
+        self.is_error = False
+        self.output = ''
+        self.rc = 0
+
+    def __unicode__(self):
+        return unicode(vars(self))
+
+    def __str__(self):
+        return unicode(self).encode('utf-8')
+
+
 class Task(object):
 
     def __init__(self, bundles_dir, dry_run=False):
@@ -47,18 +63,22 @@ class Task(object):
     def __call__(self, bundle):
         try:
             git_command, action = self.make_git_command(bundle.uri, bundle.name)
+            res = Result(bundle, git_command, action)
             if self._dry_run:
                 print " ".join([str(os.getpid())] + git_command)
-                return
-            print "Processing ({}) {}".format(action, bundle)
-            output = subprocess.check_output(git_command, stderr=subprocess.STDOUT)
-            out = "COMMAND: {}\nOUTPUT:\n{}".format(" ".join(git_command), output)
-            print out
-            return out
-        except subprocess.CalledProcessError as cpe:
-            error = "Error code {}. Output: {}".format(cpe.returncode, cpe.output)
-            print error
-            return error
+                return res
+            logger.info("Processing ({}) {}".format(action, bundle))
+
+            try:
+                output = subprocess.check_output(git_command, stderr=subprocess.STDOUT)
+                res.output = output
+                return res
+            except subprocess.CalledProcessError as cpe:
+                res.output = cpe.output
+                res.rc = cpe.returncode
+                res.is_error = True
+                logger.error("Error code %d. Output: %s", cpe.returncode, cpe.output)
+                return res
         except KeyboardInterrupt:
             pass
 
