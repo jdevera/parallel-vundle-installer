@@ -52,14 +52,32 @@ class Result(object):
     def __str__(self):
         return unicode(self).encode('utf-8')
 
+class Tracker(object):
+    def start_task(self, bundle):
+        pass
+
+    def end_task(self, bundle):
+        sys.stdout.write('#')
+        sys.stdout.flush()
+
+    def start_all(self, size):
+        print "Processing %d plugins" % size
+        sys.stdout.write(('_' * (size + 1)) + ']' + '\r[')
+
+    def end_all(self):
+        sys.stdout.write('] DONE!\n')
+        sys.stdout.flush()
+
 
 class Task(object):
 
-    def __init__(self, bundles_dir):
+    def __init__(self, bundles_dir, tracker=None):
         self._bundles_dir = bundles_dir
+        self._tracker = tracker
 
     def __call__(self, bundle):
         try:
+            self.track_start(bundle)
             if bundle.pinned:
                 logger.info("Not doing anything for %s. Pinned", bundle)
                 return Result(bundle, 'noop', 'pinned')
@@ -79,6 +97,16 @@ class Task(object):
                 return res
         except KeyboardInterrupt:
             pass
+        finally:
+            self.track_end(bundle)
+
+    def track_start(self, bundle):
+        if self._tracker is not None:
+            self._tracker.start_task(bundle)
+
+    def track_end(self, bundle):
+        if self._tracker is not None:
+            self._tracker.end_task(bundle)
 
     def make_git_command(self, uri, name):
         bundle_dir = os.path.join(os.path.expanduser(self._bundles_dir), name)
@@ -94,12 +122,16 @@ class Task(object):
 
 
 def process_queue(queue, args):
+
+    simple_tracker = Tracker()
+    simple_tracker.start_all(len(queue))
     pool = multiprocessing_api.Pool(args.jobs)
 
-    action = Task(args.bundles_dir)
+    action = Task(args.bundles_dir, tracker=simple_tracker)
 
     p = pool.map_async(action, queue, 1)
     results = p.get(0xFFFF) # Give C-C a chance
+    simple_tracker.end_all()
 
 
 def parse_args(argv):
