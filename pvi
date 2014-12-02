@@ -10,6 +10,7 @@ import argparse
 import subprocess
 from StringIO import StringIO
 import os
+import multiprocessing.dummy as multiprocessing_api
 import multiprocessing
 import logging
 
@@ -75,7 +76,7 @@ class Task(object):
 
 
 def process_queue(queue, args):
-    pool = multiprocessing.Pool(args.jobs)
+    pool = multiprocessing_api.Pool(args.jobs)
 
     action = Task(args.bundles_dir, args.dry_run)
 
