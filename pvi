@@ -8,14 +8,14 @@ __description__ = ''
 import sys
 import argparse
 import subprocess
-from StringIO import StringIO
 import os
 import multiprocessing.dummy as multiprocessing_api
 import multiprocessing
 import logging
+import tempfile
+import json
 
 # Third party imports
-import yaml
 
 # Local imports
 
@@ -29,7 +29,7 @@ class Bundle(object):
     def __init__(self, bundle_spec):
         self.uri = bundle_spec['uri']
         self.name = bundle_spec['name']
-        self.pinned = bool(bundle_spec.get('pinned', 0))
+        self.pinned = bool(bundle_spec['is_pinned'])
 
     def __unicode__(self):
         return unicode(vars(self))
@@ -209,15 +209,27 @@ def parse_args(argv):
 
 def get_bundles():
     logger.info('Getting list of plugins from Vim (assumes Vundle use)')
-    subprocess.check_call(['vim', '-X', '+put! =g:bundles', '+w! /tmp/bundles', '+qa'])
-    jsondata = None
-    with open("/tmp/bundles", "r") as fin:
-        jsondata = "[ {} ]".format(",".join(fin.readlines()))
-    if jsondata is not None:
-        bundles = yaml.load(StringIO(jsondata))
-        bundles = [ Bundle(bundle_data) for bundle_data in bundles ]
-        return bundles
-    return None
+    with tempfile.NamedTemporaryFile() as tempf:
+        tempf.write("""
+            let nbs = []
+            for b in g:bundles
+                let nb = copy(b)
+                let nb.is_pinned = b.is_pinned()
+                let nb.path = b.path()
+                call add(nbs, nb)
+            endfor
+            let bundles_json = '[' . join(nbs, ', ') . ']'
+            put! =bundles_json
+            %s/'/"/g
+            w! /tmp/bundles.json
+            """)
+        tempf.file.flush()
+        subprocess.check_call(['vim', '-X', '+so %s' % tempf.name, '+qa'])
+    with open("/tmp/bundles.json", "r") as fin:
+        bundles = json.load(fin)
+        if bundles:
+            bundles = [ Bundle(bundle_data) for bundle_data in bundles]
+            return bundles
 
 
 
