@@ -55,9 +55,8 @@ class Result(object):
 
 class Task(object):
 
-    def __init__(self, bundles_dir, dry_run=False):
+    def __init__(self, bundles_dir):
         self._bundles_dir = bundles_dir
-        self._dry_run = dry_run
 
     def __call__(self, bundle):
         try:
@@ -66,9 +65,6 @@ class Task(object):
                 return Result(bundle, 'noop', 'pinned')
             git_command, action = self.make_git_command(bundle.uri, bundle.name)
             res = Result(bundle, git_command, action)
-            if self._dry_run:
-                print " ".join([str(os.getpid())] + git_command)
-                return res
             logger.info("Processing ({}) {}".format(action, bundle))
 
             try:
@@ -100,14 +96,10 @@ class Task(object):
 def process_queue(queue, args):
     pool = multiprocessing_api.Pool(args.jobs)
 
-    action = Task(args.bundles_dir, args.dry_run)
+    action = Task(args.bundles_dir)
 
-    # action = clone_dry_run if dry_run else clone
     p = pool.map_async(action, queue, 1)
     results = p.get(0xFFFF) # Give C-C a chance
-    if not args.dry_run:
-        for res in results:
-            logger.info(res)
 
 
 def parse_args(argv):
@@ -115,7 +107,6 @@ def parse_args(argv):
     parser = argparse.ArgumentParser(description=__description__)
     parser.add_argument('--jobs', '-j', default=None, type=int)
     parser.add_argument('--bundles-dir', '-b', default=BUNDLES_DIR)
-    parser.add_argument('--dry-run', '-n', default=False, action='store_true')
     parser.add_argument('--debug', '-d', default=False, action='store_true')
     args = parser.parse_args(argv[1:])
 
