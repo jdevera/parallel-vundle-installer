@@ -46,6 +46,26 @@ class Result(object):
         self.output = ''
         self.rc = 0
 
+    def was_up_to_date(self):
+        return self.output.startswith('Already up-to-date.')
+
+    def was_updated(self):
+        return self.action == 'update' and not self.was_up_to_date()
+
+    @property
+    def action_name(self):
+        if self.is_error:
+            return 'ERROR'
+        elif self.action == 'update':
+            if self.was_up_to_date():
+                return 'UP TO DATE'
+            return 'UPDATED'
+        elif self.action == 'install':
+            return 'INSTALLED'
+        elif self.action == 'pinned':
+            return 'PINNED'
+
+
     def __unicode__(self):
         return unicode(vars(self))
 
@@ -132,6 +152,47 @@ def process_queue(queue, args):
     p = pool.map_async(action, queue, 1)
     results = p.get(0xFFFF) # Give C-C a chance
     simple_tracker.end_all()
+    return results
+
+def report(results, args):
+    installed = 0
+    updated = 0
+    errors = 0
+    up_to_date = 0
+    for res in results:
+        if res.was_up_to_date():
+            up_to_date += 1
+            if not args.verbose:
+                continue
+        elif res.is_error:
+            errors += 1
+        elif res.action == 'install':
+            installed += 1
+        elif res.action == 'update':
+
+            updated += 1
+
+        print "[%10s] Plugin '%s'" %(
+                res.action_name,
+                res.bundle.name)
+        if args.verbose:
+            if res.was_updated() or res.is_error:
+                print '----------- OUPUT --------------'
+                print res.output
+                print '----------- /OUPUT --------------'
+
+    if up_to_date == len(results):
+        print "All %d plugins were up to date" % up_to_date
+    else:
+        if errors:
+            print "%d errors" % errors
+        if installed:
+            print "%d installed" % installed
+        if updated:
+            print "%d updated" % updated
+        if up_to_date:
+            print "%d already up to date" % up_to_date
+
 
 
 def parse_args(argv):
@@ -140,6 +201,7 @@ def parse_args(argv):
     parser.add_argument('--jobs', '-j', default=None, type=int, help='Number of simultaneous operations')
     parser.add_argument('--bundles-dir', '-b', default=BUNDLES_DIR, help='Where the bundles are installed (Default: %s)' % BUNDLES_DIR)
     parser.add_argument('--debug', '-d', default=False, action='store_true', help=argparse.SUPPRESS)
+    parser.add_argument('--verbose', '-v', default=False, action='store_true', help='Show more output')
     args = parser.parse_args(argv[1:])
 
     return args
@@ -170,7 +232,8 @@ def main(argv=[__name__]):
         bundles = get_bundles()
         if not bundles:
             logger.error("No plugins found from Vim. Do you use Vundle?")
-        process_queue(bundles, args)
+        results = process_queue(bundles, args)
+        report(results, args)
 
     except KeyboardInterrupt:
         sys.exit(-1)
