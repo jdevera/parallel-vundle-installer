@@ -23,7 +23,6 @@ import yaml
 
 BUNDLES_DIR = '/tmp/bundlesdir'
 logger = multiprocessing.log_to_stderr()
-logger.setLevel(logging.INFO)
 
 class Bundle(object):
 
