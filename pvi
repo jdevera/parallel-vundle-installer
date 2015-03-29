@@ -212,7 +212,7 @@ def get_bundles():
     with tempfile.NamedTemporaryFile() as tempf:
         tempf.write("""
             let nbs = []
-            for b in g:bundles
+            for b in vundle#bundles
                 let nb = copy(b)
                 let nb.is_pinned = b.is_pinned()
                 let nb.path = b.path()
